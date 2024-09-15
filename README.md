@@ -5,21 +5,21 @@ This is an implementation of the paper "Computational design of asymptotic geode
 
 ## Citation
 
-If you use our code in your project, please consider citing the [original paper](TODO):
+If you use our code in your project, please consider citing the [original paper](https://github.com/wangbolun300/WebsViaPropagation/tree/master/data/websViaPropagation.pdf):
 
 ```bibtex
-@article{Wang:2024:WebsPropagation,
-    title        = {Computational design of asymptotic geodesic hybrid gridshells via propagation
-algorithms},
-    author       = {Wang, Bolun and Almaskin, Maryam and Pottmann, Helmut},
-    year         = 2024,
-    month        = xx,
-    journal      = {Computer-Aided Design},
-    volume       = XX,
-    number       = XX,
-    articleno    = xx,
-    numpages     = XX
-}
+@article{wang2024propagation,
+title = {Computational design of asymptotic geodesic hybrid gridshells via propagation algorithms},
+journal = {Computer-Aided Design},
+volume = {178},
+pages = {103800},
+year = {2025},
+issn = {0010-4485},
+doi = {https://doi.org/10.1016/j.cad.2024.103800},
+url = {https://www.sciencedirect.com/science/article/pii/S0010448524001271},
+author = {Bolun Wang and Maryam Almaskin and Helmut Pottmann},
+keywords = {Mesh optimization, Asymptotic curve, Geodesic curve, Triangular web, Construction-aware design, Elastic gridshell},
+abstract = {Complex architectural structures may be built in a simple and cost-effective way if their geometry respects the fabrication constraints. Examples of such structures are provided by gridshells that are built from straight and flat slats which are bent on site so that they become tangential or normal to the design surface. Tangential slats follow geodesic curves on the surface, while normal slats are attached along asymptotic curves. Extending work by Frei Otto, Julius Natterer and others, who placed the slats tangentially, Eike Schling proposed structures which also contain slats normal to the reference surface. In the present paper we address those gridshells that consist of three families of bent elements, either tangential or normal to the design surface, and are arranged in a triangular web. We propose algorithms for the computational design of such webs that start from a boundary strip and propagate it, partially under additional guidance, to an entire web.}
 ```
 
 ## Compiling Instruction 
