@@ -6702,16 +6702,16 @@ void get_orthogonal_direction_minimal_principle_curvature(const Eigen::MatrixXd 
                                                           std::vector<int> &idsneg, std::vector<Eigen::Vector3d> &ortho,
                                                           std::vector<double> &coscos, std::vector<std::vector<Eigen::Vector3d>>& CurvDir)
 {
-    int vnbr = V.rows();
-    int fnbr = F.rows();
-    // Precomputation
-    QuadricCalculator cc;
-    cc.init(V, F);
-    cc.computeCurvature_faces();
-    // get the vectors orthogonal to the directions of the smallest absolute curvature value
-    orth_smallest_curvature_and_c2(cc.curv, cc.curvDir, idspos, idsneg, ortho, coscos);
-    assert(idspos.size() == ortho.size() && idsneg.size() == coscos.size());
-    CurvDir = cc.curvDir;
+    // int vnbr = V.rows();
+    // int fnbr = F.rows();
+    // // Precomputation
+    // QuadricCalculator cc;
+    // cc.init(V, F);
+    // cc.computeCurvature_faces();
+    // // get the vectors orthogonal to the directions of the smallest absolute curvature value
+    // orth_smallest_curvature_and_c2(cc.curv, cc.curvDir, idspos, idsneg, ortho, coscos);
+    // assert(idspos.size() == ortho.size() && idsneg.size() == coscos.size());
+    // CurvDir = cc.curvDir;
 }
 void lsTools::show_minimal_curvature_directions(Eigen::MatrixXd& E0, Eigen::MatrixXd& E1, const double scaling){
     std::vector<int> idspos;

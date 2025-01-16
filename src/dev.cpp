@@ -898,9 +898,9 @@ void cutBoundaryGenerateTopology()
 {
     Eigen::MatrixXd Vquad, Vcurve;
     Eigen::MatrixXi Fquad, Fcurve;
-	std::string foldername = "F:\\tmp\\Khusrav\\CRPC\\0718\\";
-    igl::readOBJ(foldername + "0.obj", Vquad, Fquad);
-    igl::readOBJ(foldername + "curve.obj", Vcurve, Fcurve);
+	std::string foldername = "/home/bwang1/F/Khusrav/AGAG/0610/";
+    igl::readOBJ(foldername + "0610Rotate.obj", Vquad, Fquad);
+    igl::readOBJ(foldername + "curve2D.obj", Vcurve, Fcurve);
     int vnbr = Vquad.rows();
     int fnbr = Fquad.rows();
     Eigen::MatrixXd Vproj = Vquad; // prject the vertices onto 2d
