@@ -68,6 +68,7 @@ public:
 	double weight_pseudo_geodesic = 0.01;
 	double weight_strip_width = 0.0001;
 	double weight_geodesic = 3;
+	double weight_deform = 0;
 	// double weight_shading = 0.01; // For shading: the light is othogonal to the tangent direction
 
 	double maximal_step_length = 0.5;

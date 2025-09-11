@@ -196,6 +196,7 @@ public:
     void initAAG(const std::vector<Eigen::Vector3d> &Vlist, const int rnbr);
     void initAGG(const std::vector<Eigen::Vector3d> &Vlist, const int rnbr);
 	void initGGG(const std::vector<Eigen::Vector3d> &Vlist, const int rnbr);
+	void initSymmetricAAG();
     int vNbrInRow = -1;
     std::vector<std::vector<double>> rowinfo; // to record the adjancency info of rows  
     std::vector<std::vector<double>> colinfo; // to record the adjancency info of cols
@@ -225,6 +226,7 @@ public:
     double weight_gravity;
     double weight_mass = 1;
     double weight_curve = 0;
+	double weight_deform = 0;
     double pg_ratio = 1;// the ratio of diagonal (geodesic) energy to weight_pg
     double max_step = 1;
     Eigen::MatrixXd B0;
@@ -238,6 +240,7 @@ public:
     void optAGG();
 	void optGGG();
 	void optISO();
+	void optSym();
     Eigen::MatrixXd propagateBoundary();
     void reset();
     void load_triangle_mesh_tree(const igl::AABB<Eigen::MatrixXd, 3> &tree, const Eigen::MatrixXd &Vt,
@@ -277,10 +280,14 @@ private:
 	Eigen::VectorXd d0Lengths;
 	Eigen::VectorXd d1Lengths;
 	Eigen::VectorXd d0d1dots;
-    
+	std::vector<std::array<bool, 3>> verAsVar; // this is only for SymmetricAAG: show if the coordinate of a ver is a variable or constant.
+	std::vector<std::array<int,3>> verVarMap; // // this is only for SymmetricAAG: return the variable id of a coordinate of a ver.
+	int verVarCount = 0; // this is only for SymmetricAAG: the nbr of variables in the vertices.
+	spMat activeMatrix;
     std::vector<Eigen::Vector3d> OriginalCurve;
     void get_Bnd(Eigen::VectorXi& Bnd); // the boundary vertices: the net corners
     void assemble_fairness(spMat& H, Eigen::VectorXd& B, Eigen::VectorXd &energy, const int order = 0);
+	void assemble_fairness(spMat& H, Eigen::VectorXd& B, Eigen::VectorXd &energy, const std::array<bool, 4>& smoothFamily, const int order = 0);
     void assemble_gravity(spMat& H, Eigen::VectorXd& B, Eigen::VectorXd &energy);
     void assemble_gravity_AAG_AGG(spMat& H, Eigen::VectorXd& B, Eigen::VectorXd &energy, int order = 0);
     void assemble_gravity_ApproOriginal(spMat& H, Eigen::VectorXd& B, Eigen::VectorXd &energy);
@@ -294,8 +301,12 @@ private:
     void assemble_binormal_conditions(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, int family,
                                       int bnm_start, const int order = 0, const int whichBnm = 0);
     void assemble_normal_conditions(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order = 0);
+	void assemble_normal_conditions_diagonals(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order = 0);
     void assemble_approximate_curve_conditions(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order);
 	void assemble_isometric_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy);
+	void assemble_symmetric_boundary_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int whichBnd, const int order = 0);
+	void assemble_symmetric_deforming_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order = 0);
+	void assemble_symmetric_passing_line_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order = 0);
 
 public:
     // debug tools

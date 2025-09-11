@@ -398,6 +398,7 @@ int edgeCutted(const int vf, const int vt, const Eigen::Vector4i &quad, CGMesh &
         std::cout<<"ERROR: the cutted edge is not found in the list\n";
         exit(0);
     }
+	return -1;
 }
 // from a cut point to another cut point
 std::vector<int> fromCutPtToCutPt(const std::vector<int> &vloop, const int start, const int vnbr)

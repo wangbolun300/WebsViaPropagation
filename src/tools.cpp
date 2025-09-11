@@ -8730,3 +8730,26 @@ bool solveCurveEditing(const std::vector<Eigen::Vector3d>& curvein, const int pi
 	}
 	return true;
 }
+void edgesCutXZplane(const Eigen::MatrixXd& V, const int vNbrInRow, const double yValue, std::vector<std::array<int, 2>>& edges,
+	std::vector<double>& paras)
+{
+	edges.clear();
+	paras.clear();
+	int vnbr = V.rows();
+	int vNbrInCol = vnbr / vNbrInRow;
+	for (int i = 0; i < vNbrInCol - 1; i++)
+	{
+		for (int j = 0; j < vNbrInRow; j++)
+		{
+			int vid0 = i * vNbrInRow + j;
+			int vid1 = (i + 1)*vNbrInRow + j;
+			Eigen::Vector3d v0 = V.row(vid0);
+			Eigen::Vector3d v1 = V.row(vid1);
+			if (v0[1] <= yValue && v1[1] > yValue)
+			{
+				edges.push_back({ vid0, vid1 });
+				paras.push_back((yValue - v0[1]) / (v1[1] - v0[1]));
+			}
+		}
+	}
+}

@@ -260,3 +260,5 @@ void upsample_and_smooth_curve();
 void smooth_curve();
 bool solveCurveEditing(const std::vector<Eigen::Vector3d>& curvein, const int pid, const Eigen::Vector3d& position,
 	Eigen::VectorXd &vars, std::vector<Eigen::Vector3d>& curve);
+void edgesCutXZplane(const Eigen::MatrixXd& V, const int vNbrInRow, const double yValue, std::vector<std::array<int, 2>>& edges,
+	std::vector<double>& paras);

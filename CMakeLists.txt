@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.1)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+cmake_minimum_required(VERSION 3.5)
 project(lsc)
 
 
@@ -32,6 +33,7 @@ lsc_set_source_group(${LSC_SOURCES})
 add_library(lsc ${LSC_SOURCES})
 #target_sources(lsc PRIVATE ${LSC_SOURCES})
 target_include_directories(lsc PUBLIC ${PROJECT_BINARY_DIR}/include)
+target_include_directories(lsc PUBLIC ${OM_PATH}/OpenMesh-9.0.0/src)
 igl_include(core)
 igl_include(opengl)
 igl_include(glfw)
@@ -59,4 +61,3 @@ target_link_libraries(${PROJECT_NAME}_devbin PUBLIC lsc)
 add_definitions(-D_USE_MATH_DEFINES)
 target_compile_definitions(${PROJECT_NAME}_devbin PUBLIC
     CHECKER_BOARD_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
-
