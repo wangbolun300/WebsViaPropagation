@@ -66,24 +66,31 @@ void load_diagonal_info(const Eigen::VectorXi &row_front, const Eigen::VectorXi 
 		int rbid = row_back(id);
 		int cfid = col_front(id);
 		int cbid = col_back(id);
-		if (rfid < 0 || rbid < 0 || cfid < 0 || cbid < 0) // if it is a boundary vertex, skip
-		{
-			continue;
-		}
+		int lu = -1, ld = -1, ru = -1, rd = -1;
 		if (cfid >= 0)
 		{
-			int lu = row_front(cfid); // upleft
-			d0_front[id] = lu;
-			int ld = row_back(cfid);
-			d1_front[id] = ld;
+			lu = row_front(cfid);
+			ld = row_back(cfid);
+		}
+		if (rfid >= 0)
+		{
+			lu = col_front(rfid);
+			ru = col_back(rfid);
 		}
 		if (cbid >= 0)
 		{
-			int ru = row_front(cbid);
-			int rd = row_back(cbid);
-			d0_back[id] = rd;
-			d1_back[id] = ru;
+			ru = row_front(cbid);
+			rd = row_back(cbid);
 		}
+		if (rbid >= 0)
+		{
+			rd = col_back(rbid);
+			ld = col_front(rbid);
+		}
+		d0_front[id] = lu;
+		d1_front[id] = ld;
+		d0_back[id] = rd;
+		d1_back[id] = ru;
 	}
 }
 
@@ -603,7 +610,7 @@ void QuadOpt::initSymmetricAAG()
 	Eigen::VectorXd var_vec;
 	assignAagAggVertices(OrigVars, var_vec, varsize, Vlist, 0);
 	// build a matrix showing which variables are deactivated
-	Eigen::VectorXd act = Eigen::VectorXd::Zero(varsize);
+	Eigen::VectorXd act = Eigen::VectorXd::Ones(varsize);
 	for (int i = 0; i < vnbr; i++)
 	{
 		for (int j = 0; j < 3; j++)
@@ -613,11 +620,16 @@ void QuadOpt::initSymmetricAAG()
 			{
 				act[location] = 1;
 			}
+			else
+			{
+				act[location] = 0;
+			}
 		}
 	}
 	activeMatrix.resize(varsize, varsize);
 	activeMatrix = spMat(act.asDiagonal());
 	std::cout << "variables assigned\n";
+	targetEdgeLength = itv;
 	// mesh_original = mesh_in;
 	mesh_update = mesh_original;
 	verOriginal = Vlist;
@@ -1635,13 +1647,17 @@ void  QuadOpt::assemble_fairness(spMat& H, Eigen::VectorXd& B, Eigen::VectorXd &
 			col_smt = false;
 		}
 
-		if (d0_type == 0 || d0f < 0 || d0b < 0 || OptType == 2)
+		if (d0f < 0 || d0b < 0 || OptType == 2)
 		{
 			d0_smt = false;
 		}
-		if (d1_type == 0 || d1f < 0 || d1b < 0 || OptType == 2)
+		if (d1f < 0 || d1b < 0 || OptType == 2)
 		{
 			d1_smt = false;
+		}
+		if (i == 30)
+		{
+			std::cout << "vid = " << i << ", smoothing: " << row_smt << " " << col_smt << " " << d0_smt << " " << d1_smt << "\n";
 		}
 
 		if (row_smt)
@@ -1925,12 +1941,14 @@ void QuadOpt::assemble_binormal_conditions(spMat &H, Eigen::VectorXd &B, Eigen::
 			lry = locator.lry2;
 			lrz = locator.lrz2;
 		}
+
 		bool compute = true;
 
 		if (lfx < 0 || lbx < 0)
 		{
 			compute = false;
 		}
+	
 
 		if (compute == false) { // the vertex is on the boundary
 			if (!ComputeAuxiliaries)
@@ -1939,13 +1957,16 @@ void QuadOpt::assemble_binormal_conditions(spMat &H, Eigen::VectorXd &B, Eigen::
 			}
 			continue;
 		}
+		/*if (i == 35) {
+			std::cout << "bnrm xyz, " << lrx << " " << lry << " " << lrz << " lfx " << lfx << " lbx " << lbx << " lvx " << lvx << " order " << order << "\n";
+		}*/
 		Eigen::Vector3d Ver(GlobVars[lvx], GlobVars[lvy], GlobVars[lvz]);
 		Eigen::Vector3d Vf(GlobVars[lfx], GlobVars[lfy], GlobVars[lfz]);
 		Eigen::Vector3d Vb(GlobVars[lbx], GlobVars[lby], GlobVars[lbz]);
 		if (ComputeAuxiliaries) {
 			//init the binormals
 			Eigen::Vector3d real_r = ((Ver - Vf).cross(Vb - Ver)).normalized();
-			if (real_r.norm() == 0)
+			if (real_r.norm() < 1e-4)
 			{
 				real_r = Eigen::Vector3d(0, 0, 1);
 			}
@@ -1953,7 +1974,7 @@ void QuadOpt::assemble_binormal_conditions(spMat &H, Eigen::VectorXd &B, Eigen::
 			GlobVars[lry] = real_r[1];
 			GlobVars[lrz] = real_r[2];
 		}
-
+		
 		Eigen::Vector3d r(GlobVars[lrx], GlobVars[lry], GlobVars[lrz]);
 		double dis0 = (Vf - Ver).norm();
 		double dis1 = (Vb - Ver).norm();
@@ -2754,6 +2775,10 @@ void QuadOpt::assemble_normal_conditions_diagonals(spMat& H, Eigen::VectorXd& B,
 		int ld1bx = locator.ld1bx;
 		int ld1by = locator.ld1by;
 		int ld1bz = locator.ld1bz;
+		/*if (i == 35) {
+			std::cout << "norm xyz, " << lnx << " " << lny << " " << lnz << " d0fx " << ld0fx << " d0bx " << ld0bx << " d1fx " << ld1fx << " order " << order << "\n";
+		}*/
+		
 		// if (order != 0 && lrbx == lrfx) // when use diagonal to compute normal vectors, this means the diagonal does not exist
 		// {
 		//     continue;
@@ -2762,6 +2787,7 @@ void QuadOpt::assemble_normal_conditions_diagonals(spMat& H, Eigen::VectorXd& B,
 		bool d1Vanish = ld1fx == ld1bx;
 		if (d0Vanish || d1Vanish)
 		{
+			//std::cout << "d0d1 vanish: vid " << vid << " ld0fx " << ld0fx << " ld1fx " << ld1fx << "\n";
 			continue;
 		}
 		Eigen::Vector3d Ver(GlobVars[lvx], GlobVars[lvy], GlobVars[lvz]);
@@ -2769,7 +2795,15 @@ void QuadOpt::assemble_normal_conditions_diagonals(spMat& H, Eigen::VectorXd& B,
 		Eigen::Vector3d Vd0b(GlobVars[ld0bx], GlobVars[ld0by], GlobVars[ld0bz]);
 		Eigen::Vector3d Vd1f(GlobVars[ld1fx], GlobVars[ld1fy], GlobVars[ld1fz]);
 		Eigen::Vector3d Vd1b(GlobVars[ld1bx], GlobVars[ld1by], GlobVars[ld1bz]);
-		Eigen::Vector3d real_n = ((Vd0f - Vd0b).cross(Vd1f - Vd1b)).normalized();
+		Eigen::Vector3d real_n = ((Vd0f - Vd0b).cross(Vd1f - Vd1b));
+		if (real_n.norm() < 1e-4)
+		{
+			real_n << 0, 0, 1;
+		}
+		else
+		{
+			real_n.normalize();
+		}
 		if (ComputeAuxiliaries) {
 			//init the binormals
 
@@ -2895,7 +2929,7 @@ void QuadOpt::assemble_symmetric_boundary_condition(spMat &H, Eigen::VectorXd &B
 {
 	std::vector<Trip> tripletes;
 	int vnbr = V.rows();
-
+	std::vector<Eigen::Vector3d> ee0, ee1,ee2,ee3, eaxis0, eaxis1;
 	std::vector<int> edgeVers = verIdsOnEdge(vnbr, vNbrInRow, whichBnd); // the vertices on the edge we want to apply the condition
 	energy = Eigen::VectorXd::Zero(edgeVers.size() * 2); // todo
 	tripletes.reserve(edgeVers.size() * 15); // todo
@@ -2976,7 +3010,7 @@ void QuadOpt::assemble_symmetric_boundary_condition(spMat &H, Eigen::VectorXd &B
 		double dis1 = (Vd1f - Vd1b).norm();
 
 		// (Vd0f - Vd0b) * planeNormal / dis0 - sign * (Vd1f - Vd1b) * planeNormal / dis1 = 0
-		int signDirection = 1;
+		double signDirection = 1;
 		if (whichBnd == 1 || whichBnd == 3)
 		{
 			signDirection = -1;
@@ -2998,7 +3032,27 @@ void QuadOpt::assemble_symmetric_boundary_condition(spMat &H, Eigen::VectorXd &B
 		tripletes.push_back(Trip(i + edgeVers.size(), ld1bz, signDirection * planeNormal[2] / dis1));
 
 		energy[i + edgeVers.size()] = (Vd0f - Vd0b).dot(planeNormal) / dis0 - signDirection * (Vd1f - Vd1b).dot(planeNormal) / dis1;
+		ee0.push_back(Vd0f);
+		ee1.push_back(Vd0b);
+		if (signDirection > 0)
+		{
+			ee2.push_back(Vd1f);
+			ee3.push_back(Vd1b);
+		}
+		else
+		{
+			ee2.push_back(Vd1b);
+			ee3.push_back(Vd1f);
+		}
+		eaxis0.push_back(Ver);
+		eaxis1.push_back(Ver + 0.1 * planeNormal);
 	}
+	 Ee0 = vec_list_to_matrix(ee0);
+	 Ee1 = vec_list_to_matrix(ee1);
+	 Ee2 = vec_list_to_matrix(ee2);
+	 Ee3 = vec_list_to_matrix(ee3);
+	 Eax0 = vec_list_to_matrix(eaxis0);
+	 Eax1 = vec_list_to_matrix(eaxis1);
 
 	spMat J;
 	J.resize(energy.size(), GlobVars.size());
@@ -3033,9 +3087,9 @@ void  QuadOpt::assemble_symmetric_deforming_condition(spMat &H, Eigen::VectorXd 
 
 	// z - 2.5 = 0
 	tripletes.push_back(Trip(0, lvz, 1));
-	energy[0] = GlobVars[lvz] - 2.5;
+	energy[0] = GlobVars[lvz] - leftPointZTarget;
 
-	vid = vNbrInRow;
+	vid = vNbrInRow - 1;
 	rf = row_front[vid];
 	rb = row_back[vid];
 	cf = col_front[vid];
@@ -3052,7 +3106,7 @@ void  QuadOpt::assemble_symmetric_deforming_condition(spMat &H, Eigen::VectorXd 
 
 	// z = 0
 	tripletes.push_back(Trip(1, lvz, 1));
-	energy[1] = GlobVars[lvz];
+	energy[1] = GlobVars[lvz] - rightPointZTarget;
 
 	spMat J;
 	J.resize(energy.size(), GlobVars.size());
@@ -3066,9 +3120,11 @@ void QuadOpt::assemble_symmetric_passing_line_condition(spMat &H, Eigen::VectorX
 	std::vector<std::array<int, 2>> edges;
 	std::vector<double> paras;
 	edgesCutXZplane(V, vNbrInRow, 2.5, edges, paras);
+	std::cout << "cutting " << edges.size() << " edges\n";
 	std::vector<Trip> tripletes;
 	energy = Eigen::VectorXd::Zero(edges.size() * 2); // todo
 	tripletes.reserve(edges.size() * 4); // todo
+	std::vector<Eigen::Vector3d> pIntersect;
 	for (int i = 0; i < edges.size(); i++)
 	{
 		int vid = edges[i][0];
@@ -3114,6 +3170,7 @@ void QuadOpt::assemble_symmetric_passing_line_condition(spMat &H, Eigen::VectorX
 		Eigen::Vector3d Ver1(GlobVars[lv1x], GlobVars[lv1y], GlobVars[lv1z]);
 		double param = paras[i];
 		Eigen::Vector3d point = (1 - param)*Ver0 + param * Ver1;
+		pIntersect.push_back(point);
 		
 		// (1-param)*v0y + param*v1y - 2.5 = 0
 		tripletes.push_back(Trip(i, lv0y, 1 - param));
@@ -3126,6 +3183,104 @@ void QuadOpt::assemble_symmetric_passing_line_condition(spMat &H, Eigen::VectorX
 		tripletes.push_back(Trip(i + edges.size(), lv1z, param));
 
 		energy[i + edges.size()] = point[2] - 2.5;
+	}
+
+	spMat J;
+	J.resize(energy.size(), GlobVars.size());
+	J.setFromTriplets(tripletes.begin(), tripletes.end());
+	H = J.transpose() * J;
+	B = -J.transpose() * energy;
+	Vinter = vec_list_to_matrix(pIntersect);
+}
+void QuadOpt::assemble_symmetric_edge_dege_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order)
+{
+	std::vector<Trip> tripletes;
+	int vnbr = V.rows();
+	energy = Eigen::VectorXd::Zero(vnbr * 3); // todo
+	tripletes.reserve(vnbr * 24); // todo
+	double alpha = 0.3; // shrinking threadshold
+	for (int i = 0; i < vnbr; i++)
+	{
+		int vid = i;
+		int rf = row_front[vid];
+		int rb = row_back[vid];
+		int cf = col_front[vid];
+		int cb = col_back[vid];
+		int d0f = d0_front[vid];
+		int d0b = d0_back[vid];
+		int d1f = d1_front[vid];
+		int d1b = d1_back[vid];
+
+		// if on one direction, there is no vertex, we use the current vertex to replace it for normal vector 
+		// calculation. In such a way, the orientaion of the normal vector will not change.
+		variableLocator locator;
+		locator.getLocationsNormalCondition(order, vnbr, vid, rf, rb,
+			cf, cb, d0f, d0b, d1f, d1b, -1, WhichDiagonal);
+		// the vertex
+		int lvx = locator.lvx;
+		int lvy = locator.lvy;
+		int lvz = locator.lvz;
+
+		int lrbx = locator.lrbx;
+		int lrby = locator.lrby;
+		int lrbz = locator.lrbz;
+
+		int lcbx = locator.lcbx;
+		int lcby = locator.lcby;
+		int lcbz = locator.lcbz;
+
+		bool rbVanish = lrbx == lvx;
+		bool cbVanish = lcbx == lvx;
+		Eigen::Vector3d Ver(GlobVars[lvx], GlobVars[lvy], GlobVars[lvz]);
+		Eigen::Vector3d Vrb(GlobVars[lrbx], GlobVars[lrby], GlobVars[lrbz]);
+		Eigen::Vector3d Vcb(GlobVars[lcbx], GlobVars[lcby], GlobVars[lcbz]);
+
+		double d0 = (Ver - Vrb).norm();
+		double d1 = (Ver - Vcb).norm();
+		double dd = (Vrb - Vcb).norm();
+		if (!rbVanish && d0 < alpha * targetEdgeLength)
+		{
+			double weight = alpha * targetEdgeLength / d0;
+			// (Ver - Vrb)^ 2 -  target^2 = 0
+			tripletes.push_back(Trip(i, lvx, weight * (2 * Ver[0] - 2 * Vrb[0])));
+			tripletes.push_back(Trip(i, lvy, weight * (2 * Ver[1] - 2 * Vrb[1])));
+			tripletes.push_back(Trip(i, lvz, weight * (2 * Ver[2] - 2 * Vrb[2])));
+
+			tripletes.push_back(Trip(i, lrbx, weight * (-2 * Ver[0] + 2 * Vrb[0])));
+			tripletes.push_back(Trip(i, lrby, weight * (-2 * Ver[1] + 2 * Vrb[1])));
+			tripletes.push_back(Trip(i, lrbz, weight * (-2 * Ver[2] + 2 * Vrb[2])));
+
+			energy[i] = weight * (d0 * d0 - targetEdgeLength * targetEdgeLength);
+		}
+
+		if (!cbVanish && d1 < alpha * targetEdgeLength)
+		{
+			double weight = alpha * targetEdgeLength / d1;
+			// (Ver - Vcb)^ 2 -  target^2 = 0
+			tripletes.push_back(Trip(i + vnbr, lvx, weight * (2 * Ver[0] - 2 * Vcb[0])));
+			tripletes.push_back(Trip(i + vnbr, lvy, weight * (2 * Ver[1] - 2 * Vcb[1])));
+			tripletes.push_back(Trip(i + vnbr, lvz, weight * (2 * Ver[2] - 2 * Vcb[2])));
+
+			tripletes.push_back(Trip(i + vnbr, lcbx, weight * (-2 * Ver[0] + 2 * Vcb[0])));
+			tripletes.push_back(Trip(i + vnbr, lcby, weight * (-2 * Ver[1] + 2 * Vcb[1])));
+			tripletes.push_back(Trip(i + vnbr, lcbz, weight * (-2 * Ver[2] + 2 * Vcb[2])));
+
+			energy[i + vnbr] = weight * (d1 * d1 - targetEdgeLength * targetEdgeLength);
+		}
+		if (!rbVanish && !cbVanish&& dd < 1.414 * targetEdgeLength * alpha)
+		{
+			double weight = alpha * 1.414 * targetEdgeLength / dd;
+			// (Vrb - Vcb)^ 2 -  2 * target^2 = 0
+			tripletes.push_back(Trip(i + vnbr * 2, lrbx, weight * (2 * Vrb[0] - 2 * Vcb[0])));
+			tripletes.push_back(Trip(i + vnbr * 2, lrby, weight * (2 * Vrb[1] - 2 * Vcb[1])));
+			tripletes.push_back(Trip(i + vnbr * 2, lrbz, weight * (2 * Vrb[2] - 2 * Vcb[2])));
+
+			tripletes.push_back(Trip(i + vnbr * 2, lcbx, weight * (-2 * Vrb[0] + 2 * Vcb[0])));
+			tripletes.push_back(Trip(i + vnbr * 2, lcby, weight * (-2 * Vrb[1] + 2 * Vcb[1])));
+			tripletes.push_back(Trip(i + vnbr * 2, lcbz, weight * (-2 * Vrb[2] + 2 * Vcb[2])));
+
+			energy[i + vnbr * 2] = weight * (dd * dd - 2 * targetEdgeLength * targetEdgeLength);
+		}
 	}
 
 	spMat J;
@@ -3651,7 +3806,7 @@ void QuadOpt::optSym()
 	spMat H;
 	H.resize(varsize, varsize);
 	Eigen::VectorXd B = Eigen::VectorXd::Zero(varsize);
-	Eigen::VectorXd Esmth, Enorm, Ebnm0, Epg[3], Esym0, Esym1, Edefrom, Efixline;
+	Eigen::VectorXd Esmth, Enorm, Ebnm0, Epg[3], Esym0, Esym1, Edefrom, Efixline, Eedgelength;
 
 	//spMat Hgravity;  // approximation to the origional strip or the target point
 	//Eigen::VectorXd Bgravity; // right of laplacian
@@ -3664,7 +3819,7 @@ void QuadOpt::optSym()
 	//assemble_approximate_curve_conditions(HCurve, BCurve, ECurve, order);
 	//H += weight_curve * HCurve;
 	//B += weight_curve * BCurve;
-	std::array<bool, 4> smoothFamily = { false, true, true, true };
+	std::array<bool, 4> smoothFamily = { true, true, true, true };
 	spMat Hsmth;
 	Eigen::VectorXd Bsmth;
 	assemble_fairness(Hsmth, Bsmth, Esmth, smoothFamily, order);
@@ -3681,36 +3836,41 @@ void QuadOpt::optSym()
 	int family = -1;
 	family = 1; // col is the geodesic
 	// vertices vnbr * 3, normals vnbr * 3, binormals for G vnbr * 3
-	assemble_binormal_conditions(Hbnm, Bbnm, Ebnm0, family, -1, order);
+	/*assemble_binormal_conditions(Hbnm, Bbnm, Ebnm0, family, -1, order);
 	H += weight_pg * Hbnm;
-	B += weight_pg * Bbnm;
+	B += weight_pg * Bbnm;*/
 	// G
 	int type = 2; // G
-	spMat Hpg[3];
-	Eigen::VectorXd Bpg[3];
-	assemble_pg_extreme_cases(Hpg[0], Bpg[0], Epg[0], type, family, -1, order);
+	//spMat Hpg[3];
+	//Eigen::VectorXd Bpg[3];
+	//assemble_pg_extreme_cases(Hpg[0], Bpg[0], Epg[0], type, family, -1, order);
 
-	// A
-	type = 1;   // A0
-	family = 2; // col
-	assemble_pg_extreme_cases(Hpg[1], Bpg[1], Epg[1], type, family, -1, order);
+	//// A
+	//type = 1;   // A0
+	//family = 2; // col
+	//assemble_pg_extreme_cases(Hpg[1], Bpg[1], Epg[1], type, family, -1, order);
 
-	// A, the diagonal is another A
-	family = 3;
-	type = 1;   // A1
-	assemble_pg_extreme_cases(Hpg[2], Bpg[2], Epg[2], type, family, -1, order);
+	//// A, the diagonal is another A
+	//family = 3;
+	//type = 1;   // A1
+	//assemble_pg_extreme_cases(Hpg[2], Bpg[2], Epg[2], type, family, -1, order);
 
-	H += weight_pg * pg_ratio * (Hpg[0] + Hpg[1] + Hpg[2]);
-	B += weight_pg * pg_ratio * (Bpg[0] + Bpg[1] + Bpg[2]);
+	//H += weight_pg * pg_ratio * (Hpg[0] + Hpg[1] + Hpg[2]);
+	//B += weight_pg * pg_ratio * (Bpg[0] + Bpg[1] + Bpg[2]);
 	
 	// symmetric condition
-	spMat Hsym0, Hsym1;
-	Eigen::VectorXd Bsym0, Bsym1;
+	spMat Hsym0;
+	Eigen::VectorXd Bsym0;
 	assemble_symmetric_boundary_condition(Hsym0, Bsym0, Esym0, 0, order);
+	H += weight_symm0 * (Hsym0);
+	B += weight_symm0 * (Bsym0);
+
+	spMat Hsym1;
+	Eigen::VectorXd Bsym1;
 	assemble_symmetric_boundary_condition(Hsym1, Bsym1, Esym1, 3, order);
 	
-	H += weight_pg * (Hsym0 + Hsym1);
-	B += weight_pg * (Bsym0 + Bsym1);
+	H += weight_symm1 * (Hsym1);
+	B += weight_symm1 * (Bsym1);
 	
 	// deforming condition
 	spMat Hdeform;
@@ -3723,8 +3883,14 @@ void QuadOpt::optSym()
 	spMat Hfix;
 	Eigen::VectorXd Bfix;
 	assemble_symmetric_passing_line_condition(Hfix, Bfix, Efixline, order);
-	H += weight_curve * Hfix;
-	B += weight_curve * Bfix;
+	H += weight_line * Hfix;
+	B += weight_line * Bfix;
+
+	spMat Hel;
+	Eigen::VectorXd Bel;
+	assemble_symmetric_edge_dege_condition(Hel, Bel, Eedgelength, order);
+	H += weight_pg * Hel;
+	B += weight_pg * Bel;
 
 	// restrict the variables to make sure boundary vertices move in planes.
 	H = activeMatrix * H * activeMatrix;
@@ -3745,6 +3911,8 @@ void QuadOpt::optSym()
 	}
 	// std::cout<<"solved successfully"<<std::endl;
 	Eigen::VectorXd dx = solver.solve(B).eval();
+	//std::cout << "check v0 update, " << dx[0] << " " << dx[1] << " " << dx[2] << " B[0,1,2] " << B[0] << " " << B[1] << " " << B[2] << "\n";
+	//std::cout << "check activeMat " << activeMatrix.coeffRef(0, 0) << " " << activeMatrix.coeffRef(1, 1) << " " << activeMatrix.coeffRef(2, 2) << "\n ";
 	dx *= 0.75;
 	double step_length = dx.norm();
 	if (step_length > max_step)
@@ -3764,7 +3932,8 @@ void QuadOpt::optSym()
 	double ea1 = Epg[1].norm();
 	double ea2 = Epg[2].norm();
 	std::cout << "bnm, " << ebi << ", GAA, " << egeo << ", " << ea1 << ", " << ea2 << ", Symmetric "<<Esym0.norm()<<", "<<Esym1.norm()<<", fixline "<<
-		Efixline.norm()<<", deform "<<Edefrom.norm();
+		Efixline.norm()<<", deform "<<Edefrom.norm() << ", Eel "<<Eedgelength.norm();
+
 
 	real_step_length = dx.norm();
 	std::cout << ", stp, " << dx.norm() << ", ";

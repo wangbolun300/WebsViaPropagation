@@ -227,11 +227,16 @@ public:
     double weight_mass = 1;
     double weight_curve = 0;
 	double weight_deform = 0;
+	double weight_line = 0.001;
+	double weight_symm0 = 0.001;
+	double weight_symm1 = 0.001;
     double pg_ratio = 1;// the ratio of diagonal (geodesic) energy to weight_pg
     double max_step = 1;
     Eigen::MatrixXd B0;
     Eigen::MatrixXd B1;
     Eigen::MatrixXd N;
+	double leftPointZTarget = 2;
+	double rightPointZTarget = 1;
     // int pg1_type = 0;//by default disabled. 1 means asymptotic, 2 means geodesic, 3 pseudo-geodesic
     // int pg2_type = 0;
     
@@ -284,6 +289,7 @@ private:
 	std::vector<std::array<int,3>> verVarMap; // // this is only for SymmetricAAG: return the variable id of a coordinate of a ver.
 	int verVarCount = 0; // this is only for SymmetricAAG: the nbr of variables in the vertices.
 	spMat activeMatrix;
+	double targetEdgeLength = 0.1;
     std::vector<Eigen::Vector3d> OriginalCurve;
     void get_Bnd(Eigen::VectorXi& Bnd); // the boundary vertices: the net corners
     void assemble_fairness(spMat& H, Eigen::VectorXd& B, Eigen::VectorXd &energy, const int order = 0);
@@ -307,11 +313,21 @@ private:
 	void assemble_symmetric_boundary_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int whichBnd, const int order = 0);
 	void assemble_symmetric_deforming_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order = 0);
 	void assemble_symmetric_passing_line_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order = 0);
+	void assemble_symmetric_edge_dege_condition(spMat &H, Eigen::VectorXd &B, Eigen::VectorXd &energy, const int order = 0);
 
 public:
     // debug tools
     Eigen::MatrixXd Enm0;
     Eigen::MatrixXd Enm1;
+	Eigen::MatrixXd EdgeBnm0;
+	Eigen::MatrixXd EdgeBnm1;
+	Eigen::MatrixXd Vinter;
+	Eigen::MatrixXd Ee0;
+	Eigen::MatrixXd Ee1;
+	Eigen::MatrixXd Ee2;
+	Eigen::MatrixXd Ee3;
+	Eigen::MatrixXd Eax0;
+	Eigen::MatrixXd Eax1;
 };
 
 // The basic tool of LSC. Please initialize it with a mesh

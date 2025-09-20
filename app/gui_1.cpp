@@ -3592,8 +3592,7 @@ void lscif::draw_menu2(igl::opengl::glfw::Viewer &viewer, igl::opengl::glfw::img
 				viewer.selected_data_index = id;
 				std::cout << "the weights: weight_fairness, weight_pg, pg_ratio, weight_mass, weight_curve(weight angle), weight_deform\n";
 			}
-			ImGui::SameLine();
-			ImGui::InputDouble("weightDeform", &weight_deform, 0, 0, "%.4f");
+			
 			ImGui::SameLine();
 			if (ImGui::Button("optSymmetric", ImVec2(ImGui::GetWindowSize().x * 0.25f, 0.0f)))
 			{
@@ -3602,7 +3601,7 @@ void lscif::draw_menu2(igl::opengl::glfw::Viewer &viewer, igl::opengl::glfw::img
 				quad_tool.pg_ratio = weight_geodesic;
 				quad_tool.weight_mass = weight_mass;
 				quad_tool.max_step = maximal_step_length;
-				quad_tool.weight_curve = weight_angle;
+				//quad_tool.weight_curve = weight_pseudo_geodesic;
 				quad_tool.weight_deform = weight_deform;
 				if (quad_tool.V.rows() == 0)
 				{
@@ -3632,8 +3631,35 @@ void lscif::draw_menu2(igl::opengl::glfw::Viewer &viewer, igl::opengl::glfw::img
 				meshFileName.push_back("opt_" + meshFileName[id]);
 				Meshes.push_back(updateMesh);
 				viewer.selected_data_index = id;
+				viewer.data().add_points(quad_tool.Vinter, sea_green);
+
 			}
+			ImGui::SameLine();
+			if (ImGui::Button("showSymmCondi", ImVec2(ImGui::GetWindowSize().x * 0.25f, 0.0f)))
+			{
+				const Eigen::RowVector3d blue(0.2, 0.2, 0.8);
+
+				const Eigen::RowVector3d black(0, 0, 0);
+				const Eigen::RowVector3d green(0.2, 0.8, 0.2);
+				viewer.data().add_edges(quad_tool.Ee0, quad_tool.Ee1, blue);
+				viewer.data().add_edges(quad_tool.Ee2, quad_tool.Ee3, blue);
+				viewer.data().add_edges(quad_tool.Eax0, quad_tool.Eax1, green);
+				std::cout << "the number of conditions " << quad_tool.Ee0.rows() << "\n";
+			}
+			
+			ImGui::InputDouble("weightDeform", &weight_deform, 0, 0, "%.4f");
+			ImGui::SameLine();
+			ImGui::InputDouble("leftZ", &quad_tool.leftPointZTarget, 0, 0, "%.4f");
+			ImGui::SameLine();
+			ImGui::InputDouble("rightZ", &quad_tool.rightPointZTarget, 0, 0, "%.4f");
+			ImGui::InputDouble("weightFitLine", &quad_tool.weight_line, 0, 0, "%.4f");
+			ImGui::SameLine();
+			ImGui::InputDouble("weightSym0", &quad_tool.weight_symm0, 0, 0, "%.4f");
+			ImGui::SameLine();
+			ImGui::InputDouble("weightSym1", &quad_tool.weight_symm1, 0, 0, "%.4f");
+
 		}
+		
 		
 		// binormals as orthogonal as possible.
 		ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.6f, 0.6f));
